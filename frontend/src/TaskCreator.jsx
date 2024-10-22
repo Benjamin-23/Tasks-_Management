@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { ethers } from "ethers";
 
 const contractABI = [
@@ -23,6 +23,21 @@ function App() {
   const [newTaskPayment, setNewTaskPayment] = useState("");
   const [isConnected, setIsConnected] = useState(false);
 
+  const loadTasks = async (contract, address) => {
+    try {
+      const taskIds = await contract.getUserTasks(address);
+      const loadedTasks = await Promise.all(
+        taskIds.map(async (id) => {
+          const task = await contract.getTask(id);
+          return { id: id.toNumber(), ...task };
+        })
+      );
+      setTasks(loadedTasks);
+    } catch (error) {
+      console.error("Error loading tasks:", error);
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       if (typeof window.ethereum !== "undefined") {
@@ -31,6 +46,9 @@ function App() {
           const provider = new ethers.providers.Web3Provider(window.ethereum);
           const signer = provider.getSigner();
           const address = await signer.getAddress();
+          console.log(address, "address");
+          console.log(signer, "signer");
+
           setAccount(address);
           setIsConnected(true);
 
@@ -66,6 +84,7 @@ function App() {
         );
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAccountsChanged = async (accounts) => {
@@ -84,21 +103,6 @@ function App() {
       );
       setContract(contract);
       loadTasks(contract, accounts[0]);
-    }
-  };
-
-  const loadTasks = async (contract, address) => {
-    try {
-      const taskIds = await contract.getUserTasks(address);
-      const loadedTasks = await Promise.all(
-        taskIds.map(async (id) => {
-          const task = await contract.getTask(id);
-          return { id: id.toNumber(), ...task };
-        })
-      );
-      setTasks(loadedTasks);
-    } catch (error) {
-      console.error("Error loading tasks:", error);
     }
   };
 

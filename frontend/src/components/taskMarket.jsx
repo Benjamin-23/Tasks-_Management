@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { ethers } from "ethers";
+import { useState, useEffect } from "react";
+import { ethers, utils } from "ethers";
+import SubAccountManager from "./subAccount";
 
 const contractABI = [
   // Add these new functions to your existing ABI
@@ -17,12 +18,12 @@ function TaskMarketplace() {
   const [assignedTasks, setAssignedTasks] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState("");
+  const [subAccounts, setSubAccounts] = useState([]);
 
   useEffect(() => {
     const init = async () => {
       if (typeof window.ethereum !== "undefined") {
         try {
-          // Request account access
           const accounts = await window.ethereum.request({
             method: "eth_requestAccounts",
           });
@@ -43,15 +44,17 @@ function TaskMarketplace() {
 
             loadAllTasks(contract);
             loadAssignedTasks(contract, address);
+            loadSubAccounts(contract, address);
 
-            // Set up event listeners
             contract.on("TaskCreated", () => loadAllTasks(contract));
             contract.on("TaskAssigned", () => {
               loadAllTasks(contract);
               loadAssignedTasks(contract, address);
             });
+            contract.on("SubAccountCreated", () =>
+              loadSubAccounts(contract, address)
+            );
 
-            // Listen for account changes
             window.ethereum.on("accountsChanged", handleAccountsChanged);
           } else {
             setError("No accounts found. Please connect to MetaMask.");
@@ -71,7 +74,6 @@ function TaskMarketplace() {
 
     init();
 
-    // Cleanup function
     return () => {
       if (window.ethereum) {
         window.ethereum.removeListener(
@@ -84,27 +86,31 @@ function TaskMarketplace() {
       }
     };
   }, []);
+
   const handleAccountsChanged = async (accounts) => {
     if (accounts.length === 0) {
-      console.log("Please connect to MetaMask.");
+      setError("Please connect to MetaMask.");
       setIsConnected(false);
     } else if (accounts[0] !== account) {
       setAccount(accounts[0]);
       setIsConnected(true);
       loadAssignedTasks(contract, accounts[0]);
+      loadSubAccounts(contract, accounts[0]);
     }
   };
 
   const loadAllTasks = async (contract) => {
     try {
-      const taskIds = await contract.getAllTasks();
+      const taskCount = await contract.tasks.length;
       const loadedTasks = await Promise.all(
-        taskIds.map(async (id) => {
-          const task = await contract.getTask(id);
-          return { id: id.toNumber(), ...task };
-        })
+        Array(taskCount)
+          .fill()
+          .map(async (_, i) => {
+            const task = await contract.getTask(i);
+            return { id: i, ...task };
+          })
       );
-      setAllTasks(loadedTasks);
+      setAllTasks(loadedTasks.filter((task) => !task.assignee));
     } catch (error) {
       console.error("Error loading all tasks:", error);
     }
@@ -112,7 +118,7 @@ function TaskMarketplace() {
 
   const loadAssignedTasks = async (contract, address) => {
     try {
-      const taskIds = await contract.getAssignedTasks(address);
+      const taskIds = await contract.getUserTasks(address);
       const loadedTasks = await Promise.all(
         taskIds.map(async (id) => {
           const task = await contract.getTask(id);
@@ -122,6 +128,20 @@ function TaskMarketplace() {
       setAssignedTasks(loadedTasks);
     } catch (error) {
       console.error("Error loading assigned tasks:", error);
+    }
+  };
+
+  const loadSubAccounts = async (contract, address) => {
+    try {
+      const subAccountCount = await contract.subAccountCount(address);
+      const accounts = [];
+      for (let i = 0; i < subAccountCount; i++) {
+        const balance = await contract.getSubAccountBalance(address, i);
+        accounts.push({ id: i, balance: ethers.utils.formatEther(balance) });
+      }
+      setSubAccounts(accounts);
+    } catch (error) {
+      console.error("Error loading sub-accounts:", error);
     }
   };
 
@@ -138,6 +158,21 @@ function TaskMarketplace() {
     }
   };
 
+  const completeTask = async (taskId) => {
+    if (contract && subAccounts.length > 0) {
+      try {
+        const tx = await contract.completeTask(taskId, subAccounts[0].id);
+        await tx.wait();
+        loadAssignedTasks(contract, account);
+        loadSubAccounts(contract, account);
+      } catch (error) {
+        console.error("Error completing task:", error);
+      }
+    } else {
+      setError("Please create a sub-account first.");
+    }
+  };
+
   const renderTaskList = (tasks, isAssigned = false) => (
     <div className="space-y-4">
       {tasks.map((task) => (
@@ -145,22 +180,25 @@ function TaskMarketplace() {
           <p className="text-sm text-gray-600">Task ID: {task.id}</p>
           <p className="font-semibold text-gray-800">{task.description}</p>
           <p className="text-sm text-gray-600">
-            Payment: {ethers.utils.formatEther(task.payment)} ETH
+            Payment: {utils.formatEther(task.payment)} ETH
           </p>
           <p className="text-sm text-gray-600">
             Status: {task.completed ? "Completed" : "In Progress"}
           </p>
-          {isAssigned && (
-            <p className="text-sm text-gray-600">
-              Closing Date: [Add closing date logic here]
-            </p>
-          )}
           {!isAssigned && !task.assignee && (
             <button
               onClick={() => assignTask(task.id)}
               className="mt-2 bg-blue-500 text-white py-1 px-3 rounded-md text-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
             >
               Assign to Me
+            </button>
+          )}
+          {isAssigned && !task.completed && (
+            <button
+              onClick={() => completeTask(task.id)}
+              className="mt-2 bg-green-500 text-white py-1 px-3 rounded-md text-sm hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
+            >
+              Complete Task
             </button>
           )}
         </div>
@@ -185,19 +223,23 @@ function TaskMarketplace() {
             </p>
           )}
 
-          {isConnected && (
+          {
             <>
+              {/* {isConnected && (
+                <SubAccountManager contract={contract} account={account} />
+              )} */}
+
               <h2 className="text-2xl font-semibold mt-8 mb-3 text-gray-700">
                 Available Tasks
               </h2>
-              {renderTaskList(allTasks.filter((task) => !task.assignee))}
+              {renderTaskList(allTasks)}
 
               <h2 className="text-2xl font-semibold mt-8 mb-3 text-gray-700">
                 Your Assigned Tasks
               </h2>
               {renderTaskList(assignedTasks, true)}
             </>
-          )}
+          }
         </div>
       </div>
     </div>
