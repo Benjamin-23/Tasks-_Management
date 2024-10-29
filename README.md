@@ -1,6 +1,19 @@
-TaskProject Smart Contract
+# TaskProject Smart Contract
+
 A decentralized task management and payment system built on Ethereum. This smart contract enables users to create tasks, assign workers, manage payments through sub-accounts, and handle task completion verification.
-Features
+
+# video link
+
+https://www.loom.com/share/02f98e1dda5747c4bb2ef18fa0bbc1ab?sid=4b836aee-b4b2-47c3-a0e8-b20998043dda
+
+# Errors
+
+- Task list is not showing .
+- User / task doers are not able to see they task bot complete and ongoing .
+
+# NOTE: Working on the errors still . by the end of this November month the system will be live and working .
+
+# Features
 
 - Create tasks with attached payments
 - Assign tasks to workers
