@@ -1,8 +1,60 @@
-# React + Vite
+# Task Frontend Application
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Overview
+The frontend application provides a user-friendly interface for interacting with the TaskProject smart contract. Built with React and React Router, it features a modern, responsive design using Tailwind CSS for styling.
+Features
 
-Currently, two official plugins are available:
+- Responsive navigation system
+- Task creation interface
+- Task marketplace for browsing available tasks
+- Clean, modern UI with hover effects
+- Mobile-friendly design
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+The main application component that handles routing and navigation:
+
+- Navigation bar with responsive design
+- Route configuration for different pages
+- Consistent layout structure
+
+Navigation Features
+
+- Home/Task Creation page (/)
+- Task Marketplace (/marketplace)
+- Hover effects on navigation items
+- Mobile-responsive design
+
+# Technical Stack
+
+- React: Frontend framework
+- React Router: Navigation and routing
+- Tailwind CSS: Styling and UI components
+- Web3.js/Ethers.js: Ethereum interaction (implementation required)
+
+Setup Instructions
+
+Install dependencies:
+
+```
+npm install react react-router-dom
+npm install -D tailwindcss postcss autoprefixer
+```
+
+Initialize Tailwind CSS:
+
+```
+npx tailwindcss init -p
+```
+
+Configure environment:
+
+# .env
+
+```
+REACT_APP_CONTRACT_ADDRESS=your_contract_address
+```
+
+Start the development server:
+
+```
+npm run dev
+```

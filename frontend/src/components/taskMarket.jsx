@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { ethers, utils } from "ethers";
-import SubAccountManager from "./subAccount";
 
 const contractABI = [
   // Add these new functions to your existing ABI

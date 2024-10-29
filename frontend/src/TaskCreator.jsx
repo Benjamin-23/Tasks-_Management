@@ -23,21 +23,6 @@ function App() {
   const [newTaskPayment, setNewTaskPayment] = useState("");
   const [isConnected, setIsConnected] = useState(false);
 
-  const loadTasks = async (contract, address) => {
-    try {
-      const taskIds = await contract.getUserTasks(address);
-      const loadedTasks = await Promise.all(
-        taskIds.map(async (id) => {
-          const task = await contract.getTask(id);
-          return { id: id.toNumber(), ...task };
-        })
-      );
-      setTasks(loadedTasks);
-    } catch (error) {
-      console.error("Error loading tasks:", error);
-    }
-  };
-
   useEffect(() => {
     const init = async () => {
       if (typeof window.ethereum !== "undefined") {
@@ -46,8 +31,8 @@ function App() {
           const provider = new ethers.providers.Web3Provider(window.ethereum);
           const signer = provider.getSigner();
           const address = await signer.getAddress();
-          console.log(address, "address");
-          console.log(signer, "signer");
+          // console.log(address, "address");
+          // console.log(signer, "signer");
 
           setAccount(address);
           setIsConnected(true);
@@ -84,8 +69,39 @@ function App() {
         );
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const loadTasks = async (contract, address) => {
+    try {
+      const code = await contract.provider.getCode(contract.address);
+      console.log(code, "code");
+
+      if (code === "0x") {
+        console.error("Contract not deployed at this address");
+      }
+      console.log(contract, "contract");
+      console.log(address, "address");
+      console.log("Contract address:", contract.address);
+      const taskIds = await contract.getUserTasks(address);
+      console.log(taskIds, "taskIds");
+
+      const loadedTasks = await Promise.all(
+        taskIds.map(async (id) => {
+          const task = await contract.getTask(id);
+          return { id: id.toNumber(), ...task };
+        })
+      );
+      setTasks(loadedTasks);
+    } catch (error) {
+      console.error("Error loading tasks:", error);
+      // Check if contract is properly connected
+      if (!contract.signer) {
+        console.error("Contract not connected to a signer");
+      } else {
+        console.error("Error loading tasks:", error);
+      }
+    }
+  };
 
   const handleAccountsChanged = async (accounts) => {
     if (accounts.length === 0) {

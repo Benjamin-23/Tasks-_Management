@@ -104,10 +104,17 @@ contract TaskProject {
         Task storage task = tasks[_taskId];
         return (task.description, task.payment, task.creator, task.assignee, task.completed, task.paid);
     }
-
+//to redo
     function getUserTasks(address _user) public view returns (uint256[] memory) {
         return userTasks[_user];
     }
+
+   //Changes here
+
+// Consider adding a function to check if user has any tasks
+function hasUserTasks(address _user) public view returns (bool) {
+    return userTasks[_user].length > 0;
+}
 
     function getSubAccountBalance(address _user, uint256 _subAccountId) public view returns (uint256) {
         require(subAccounts[_user][_subAccountId].exists, "Sub-account does not exist");
